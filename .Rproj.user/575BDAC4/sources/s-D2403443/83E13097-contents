@@ -1,12 +1,12 @@
 # Load in colleges.csv file
-d = read.csv("./colleges.csv", header = T) 
+d = read.csv("./Data/colleges.csv", header = T) 
 
 d = d[order(d$cases, decreasing = T),]
 d = d[is.na(d$cases) == FALSE,]
 # In article, address why we don't have to use proportions (has to do with density)
 # We couldnt number of students on campus, but that isnt so bad because^
 
-allCovid = read.csv("./Oct8_allData.csv", header = T)
+allCovid = read.csv("./Data/Oct8_allData.csv", header = T)
 usData = allCovid[allCovid$Country_Region == "US",]
 
 usData_states = unique(usData$Province_State)
@@ -25,7 +25,7 @@ usData$Province_State[usData$Province_State == "District of Columbia"] = "Washin
 
 
 # USED 2019 ESTIMATES FOR STATE POPULATION
-statePop = read.csv("./statePop.csv", header = TRUE)
+statePop = read.csv("./Data/statePop.csv", header = TRUE)
 statePop[,1] = substr(statePop[,1], 2, nchar(statePop[,1]))
 statePop[,1][statePop[,1] == "District of Columbia"] = "Washington, D.C."
 
@@ -59,7 +59,7 @@ abline(w$state_covid, w$cases, col = "red")
 ##===========================================================
 ## State data not informative enough.... zoom in on county
 ##===========================================================
-countyCovid <- read.csv("./countyCovid_allDates.csv", header = TRUE)
+countyCovid <- read.csv("./Data/countyCovid_allDates.csv", header = TRUE)
 unique(countyCovid$date)     #want Oct. 8 to match college covid data we have
 countyOct8 <- countyCovid[countyCovid$date == "2020-10-08",]
 
@@ -67,7 +67,7 @@ countyOct8 <- countyCovid[countyCovid$date == "2020-10-08",]
 # USED 2019 ESTIMATES FOR COUNTY POPULATION
 
 # Working with county populations
-countyPop = read.csv("./countyPop.csv", header = FALSE)
+countyPop = read.csv("./Data/countyPop.csv", header = FALSE)
 names(countyPop)[names(countyPop) == "V1"] <- "pop"   #change column names
 names(countyPop)[names(countyPop) == "V2"] <- "county"
 names(countyPop)[names(countyPop) == "V3"] <- "state"
