@@ -126,48 +126,258 @@ plot(d$county_covid, d$cases, xlim = c(0,0.05))
 
 
 
-## Scraping from C2i dashboard
+## Scraping from hronicle website (October 1, 2020)
 library("RSelenium")
 library("rvest")
 library("tidyverse")
 
 binman::list_versions("chromedriver")
-rD <- rsDriver(browser="chrome", port=232L, verbose=T, chromever = "85.0.4183.87")
+rD <- rsDriver(browser="chrome", port=230L, verbose=T, chromever = "85.0.4183.87")
 remDr <- rD[["client"]]
 
 remDr$navigate("https://www.chronicle.com/article/heres-a-list-of-colleges-plans-for-reopening-in-the-fall/?cid2=gen_login_refresh&cid=gen_sign_in&cid2=gen_login_refresh")
 
-# remDr$findElement(using = "id", value = "homeMap")$sendKeysToElement(list("Vassar College"))
-Sys.sleep(5) # give the page time to fully load
+# Find the next button
+nextbutton_Element <-
+  remDr$findElement(using = "xpath", value="/html/body/div[3]/div/main/div/article/div[3]/div/div/div/div[8]/div/div/div[1]/div[2]/div[1]/div[2]/a[2]")
+# nextbutton_Element$clickElement()
+Sys.sleep(2)
 html <- remDr$getPageSource()[[1]]
-
 xpath <- "/html/body/div[3]/div/main/div/article/div[3]/div/div/div/div[8]/div/div/div[1]/div[2]/table/tbody"
 
-signals <- read_html(html) %>% # parse HTML
-  html_nodes(xpath = xpath)
-View(signals)
-
-# Matrix to fill
-scraped <- matrix(0, nrow = 2958, ncol = 10)
-colnames(scraped) <- c("pathClass", "stroke", "strokeOpacity", "strokeWidth", 'strokeLinecap', 'strokeLinejoin', 'fill', 'fillOpacity', 'fillRule', 'd') 
-
-for(i in 1:2958){ 
-  string = as.character(xml_child(xml_child(signals[[1]], 1), i))
-  split = strsplit(string, "\"")
+scraped <- matrix(0, nrow = 2958, ncol = 4)
+     
+for(j in 1:59){
+  signals <- read_html(html) %>% # parse HTML
+    html_nodes(xpath = xpath)
   
-  scraped[i,1] <- split[[1]][2]
-  scraped[i,2] <- split[[1]][4]
-  scraped[i,3] <- split[[1]][6]
-  scraped[i,4] <- split[[1]][8]
-  scraped[i,5] <- split[[1]][10]
-  scraped[i,6] <- split[[1]][12]
-  scraped[i,7] <- split[[1]][14]
-  scraped[i,8] <- split[[1]][16]
-  scraped[i,9] <- split[[1]][18]
-  scraped[i,10] <- split[[1]][20]
+  lst = seq(2,100,2)
+  for(i in 1:50){ 
+    college_info = as.character(xml_child(xml_child(signals[[1]], lst[i]), 1))
+    info = strsplit(strsplit(college_info, '">')[[1]][2], "<")[[1]][1]
+    scraped[(50*(j-1) + i), 1] = info 
+    
+    plan = as.character(xml_child(xml_child(signals[[1]], lst[i]), 3))
+    p = strsplit(strsplit(plan, '">')[[1]][4],"<")[[1]][1]
+    scraped[(50*(j-1) + i), 2] = p
+    
+    enrollment = as.character(xml_child(xml_child(signals[[1]], lst[i]), 4))
+    e = strsplit(strsplit(enrollment, '">')[[1]][2],'<')[[1]][1]
+    e = as.numeric(gsub(",","",e))
+    scraped[(50*(j-1) + i), 3] = e
+    
+    county_cases = as.character(xml_child(xml_child(signals[[1]], lst[i]), 5))
+    c = strsplit(strsplit(county_cases,'">')[[1]][2],"<")[[1]][1]
+    c = as.numeric(gsub(",","",c))
+    scraped[(50*(j-1) + i), 4] = c
+  }
+  
+  nextbutton_Element$clickElement()
+  Sys.sleep(3)
+  html <- remDr$getPageSource()[[1]]
 }
 
-for(i in 1:10){cat(unique(scraped[,i]), '\n')}
+
+# Matrix to fill
+which(duplicated(scraped))
+
+# Stopped on 2950... add manually
+signals <- read_html(html) %>%
+  html_nodes(xpath = xpath)
+lst = seq(2,16,2)
+mtx <- matrix(0, nrow = 8, ncol = 4)
+for(i in 1:8){ 
+  college_info = as.character(xml_child(xml_child(signals[[1]], lst[i]), 1))
+  info = strsplit(strsplit(college_info, '">')[[1]][2], "<")[[1]][1]
+  mtx[i, 1] = info 
+  
+  plan = as.character(xml_child(xml_child(signals[[1]], lst[i]), 3))
+  p = strsplit(strsplit(plan, '">')[[1]][4],"<")[[1]][1]
+  mtx[i, 2] = p
+  
+  enrollment = as.character(xml_child(xml_child(signals[[1]], lst[i]), 4))
+  e = strsplit(strsplit(enrollment, '">')[[1]][2],'<')[[1]][1]
+  e = as.numeric(gsub(",","",e))
+  mtx[i, 3] = e
+  
+  county_cases = as.character(xml_child(xml_child(signals[[1]], lst[i]), 5))
+  c = strsplit(strsplit(county_cases,'">')[[1]][2],"<")[[1]][1]
+  c = as.numeric(gsub(",","",c))
+  mtx[i, 4] = c
+}
+
+
+final = rbind(scraped[1:2950,], mtx)
+colnames(final) = c("Name", "Plan", "Enrollment", "Cases")
+df <- data.frame(final)
+
+#df <- readRDS("clare.rds")
+
+# Wisconsin shit
+df$Name[df$Name == 'University of Wisconsin at Eau Claire'] = 'University of Wisconsin-Eau Claire'
+df$Name[df$Name == 'University of Wisconsin at Green Bay'] = 'University of Wisconsin-Green Bay'
+df$Name[df$Name == 'University of Wisconsin at La Crosse'] = 'University of Wisconsin-La Crosse'
+df$Name[df$Name == 'University of Wisconsin at Madison'] = 'University of Wisconsin-Madison'
+df$Name[df$Name == 'University of Wisconsin at Milwaukee'] = 'University of Wisconsin-Milwaukee'
+df$Name[df$Name == 'University of Wisconsin at Oshkosh'] = 'University of Wisconsin-Oshkosh'
+df$Name[df$Name == 'University of Wisconsin at Platteville'] = 'University of Wisconsin-Platteville'
+df$Name[df$Name == 'University of Wisconsin at River Falls'] = 'University of Wisconsin-River Falls'
+df$Name[df$Name == 'University of Wisconsin at Stevens Point'] = 'University of Wisconsin-Stevens Point'
+df$Name[df$Name == 'University of Wisconsin at Superior'] = 'University of Wisconsin-Superior'
+df$Name[df$Name == 'University of Wisconsin at Whitewater'] = 'University of Wisconsin-Whitewater'
+
+
+
+##===================
+# ACTUAL HODP WORK 
+##===================
+# datesets that we have: 'df' and 'd'
+data_fr <- d[d$college %in% df$Name,]
+data_fr$Name <- data_fr$college
+data_fr$college <- NULL
+
+# df = df[c(1:905, 907:nrow(df)),] # duplicate
+# df = df[c(1:1105, 1108:nrow(df)),] # duplicate
+
+frfr <- merge(data_fr, df, by= "Name", all.x=TRUE)
+frfr <- frfr[frfr$county_covid != "untouched" & frfr$county_covid != "proportion",]
+frfr$county_covid <- as.numeric(frfr$county_covid)
+
+
+# Pretty graphs
+#### Style Guide ####
+# Step 0: HODP Theme
+if (!require('dplyr')) install.packages('dplyr'); library(dplyr)
+if (!require('ggplot2')) install.packages('ggplot2'); library(ggplot2)
+if (!require('hrbrthemes')) install.packages('hrbrthemes'); library(hrbrthemes)
+if (!require('magick')) install.packages('magick'); library(magick)
+if (!require('plotly')) install.packages('plotly'); library(plotly)
+logo <- image_read("logo.png")
+# Legend: https://stackoverflow.com/questions/14622421/how-to-change-legend-title-in-ggplot
+
+monochrome <- c('#760000', '#BE1E26', '#D84742', '#FF6B61', '#FF9586')
+primary <- c('#EE3838', '#FA9E1C', '#78C4D4', '#4B5973', '#E2DDDB')
+sidebysidebarplot <- c("#ef3e3e", "#2c3e50")
+theme_hodp <- function () { 
+  theme_classic(base_size=12, base_family="Helvetica") %+replace%
+    theme(
+      panel.background  = element_rect(fill="#F2F2F2", colour=NA),
+      plot.background = element_rect(fill="#F2F2F2", colour="#d3d3d3"),
+      legend.background = element_rect(fill="transparent", colour=NA),
+      legend.key = element_rect(fill="transparent", colour=NA),
+      plot.title = element_text(size=24,  family="Helvetica", face = "bold", margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      plot.subtitle = element_text(size=18,  family="Helvetica", color="#717171", face = "italic", margin = margin(t = 0, r = 0, b = 10, l = 0)),
+      plot.caption = element_text(size=8,  family="Helvetica", hjust = 1),
+      axis.text.x =element_text(size=10,  family="Helvetica"),
+      axis.title.x =element_text(size=14, family="Helvetica", margin = margin(t = 10, r = 0, b = 0, l = 0), face = "bold"),
+      axis.title.y = element_text(margin = margin(t = 0, r = 10, b = 0, l = 0), size=14, family="Helvetica", angle=90, face ='bold'),
+      legend.title=element_text(size=10, family="Helvetica"), 
+      legend.text=element_text(size=10, family="Helvetica"),
+      legend.position = "bottom",
+      axis.ticks = element_blank()
+    )
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+a <- ggplot(data=frfr, aes(x=county_covid, y=cases)) +
+  theme_hodp() 
+png(".output.png", width = 480, height = 350, res = 300)
+a
+dev.off()
+
+
+
+
+
+
+
+advised <- frfr
+advised$Plan[advised$Plan == 'Fully in person' | advised$Plan == 'Primarily in person'] = "In Person"
+advised$Plan[advised$Plan == 'Fully online' | advised$Plan == 'Primarily online'] = "Online"
+advised$Plan[advised$Plan == 'Undetermined'] = "Other"
+advised$casesProp <- advised$cases/as.numeric(advised$Enrollment)
+
+high <- c('Iowa Wesleyan University', "Dickinson State University", "Adrian College")
+
+a <- ggplot(data=advised, aes(x=county_covid, y=casesProp)) +
+  geom_point(aes(colour = factor(Plan))) +
+  geom_text(aes(label=ifelse(Name == high[1],as.character(Name),'')),hjust=1,vjust=-1) +
+  geom_text(aes(label=ifelse(Name == high[2],as.character(Name),'')),hjust=1,vjust=-1) +
+  geom_text(aes(label=ifelse(Name == high[3],as.character(Name),'')),hjust=1,vjust=-1) +
+  scale_color_manual(values = c("#FA9E1C", "#EE3838", "#4B5973", "#E2DDDB"),name="Plan", labels = c('Hybrid', 'In Person', 'Online', 'Other')) +
+  labs(title="Are Colleges Making Advised Reopening Plans?") +
+  xlab("Proportion of COVID-19 Cases in County") +
+  ylab("Number of COVID-19 Cases in College") +
+  ylim(c(0,0.25)) + 
+  xlim(c(0,0.065)) +
+  theme(legend.position="bottom") +
+  theme_hodp() 
+
+png("./output.png", width = 2592, height = 1890, res = 300)
+a
+dev.off()
+
+# Table of Ivy Cases
+ivies <- c("Harvard University", "Yale University", "Princeton University", "Dartmouth College", "Brown University", "Columbia University", "University of Pennsylvania", "Stanford University", "Cornell University")
+x = frfr[frfr$Name %in% ivies,]
+x$casesProp <- x$cases/as.numeric(x$Enrollment)
+x$date <- NULL
+x$state <- NULL 
+x$city <- NULL
+x$ipeds_id <- NULL 
+x$cases <- NULL
+x$notes <- NULL 
+x$state_covid <- NULL
+x$mergedName <- NULL
+x$Enrollment <- NULL
+x$Cases <- NULL
+colnames(x) <- c("University", "County Name", "County COVID-19 Proportion", "Reopening Plan", "University COVID-19 Cases")
+write.csv(x, file = "./ivies.csv")
+
+#x <- read.csv("./ivies.csv", header = TRUE)[1:9,]
+
+x <- rbind(x, x)
+x$value = c(x$County.COVID.19[1:9], x$University.COVID.19[1:9])
+x$Scope <- c(rep("County",9), rep("University",9))
+x$County.COVID.19 <- NULL 
+x$University.COVID.19 <- NULL
+x$County.Name <- NULL
+
+x$University <- factor(x$University, levels = c('Harvard', "Columbia", 'Princeton','UPenn',  "Brown", "Yale", 'Dartmouth',  'Stanford', 'Cornell'))
+b <- ggplot(data=x, aes(x=University, y=value, fill=Scope)) +
+  geom_bar(stat="identity", position=position_dodge()) +
+  theme_hodp() + 
+  scale_fill_manual(values=c('#EE3838','#4B5973')) + 
+  theme(legend.position="bottom", axis.text.x = element_text(angle = 45, hjust = 0.4), plot.title = element_text(size=15)) +
+  ylab("Proportion of COVID-19 Cases") +
+  labs(title= "Comparison of COVID-19 Proportions at the County and University Level") + 
+  xlab("")
+  
+
+png("./barplot.png", width = 2592, height = 1890, res = 300)
+b 
+dev.off()
+
+
+
+
+
 
 
 
