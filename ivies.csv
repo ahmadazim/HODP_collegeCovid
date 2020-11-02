@@ -1,15 +1,10 @@
-University,County Name,County COVID-19,University COVID-19,Reopening Plan
-Harvard,Middlesex, 0.01780000 , 0.00230000 ,Fully online
-Columbia,New York, 0.02100000 , 0.00050000 ,Fully online
-Princeton,Mercer, 0.02390000 , 0.00600000 ,Fully online
-UPenn,Philadelphia, 0.02430000 , 0.01450000 ,Fully online
-Brown,Providence, 0.03070000 , 0.00230000 ,Primarily online
-Yale,New Haven, 0.01730000 , 0.01300000 ,Primarily online
-Stanford,Santa Clara, 0.01150000 , 0.00790000 ,Primarily online
-Dartmouth,Grafton, 0.00170000 , 0.00180000 ,Primarily online
-Cornell,Tompkins, 0.00460000 , 0.00650000 ,Hybrid
-,,,,
-,,,,
-,,,,
-,,,,
-,, ,,
+University,County Name,County COVID-19 Proportion,Reopening Plan,Type,University COVID-19 Cases
+Brown,Providence,0.030732583,Primarily online,"Private nonprofit, 4-year",0.002339865
+Columbia,New York,0.020963882,Fully online,"Private nonprofit, 4-year",0.000450494
+Cornell,Tompkins,0.004550793,Hybrid,"Private nonprofit, 4-year",0.006483051
+Dartmouth,Grafton,0.001746657,Primarily online,"Private nonprofit, 4-year",0.001825928
+Harvard,Middlesex,0.017768827,Fully online,"Private nonprofit, 4-year",0.002280935
+Princeton,Mercer,0.023876657,Fully online,"Private nonprofit, 4-year",0.005970862
+Stanford,Santa Clara,0.011491546,Primarily online,"Private nonprofit, 4-year",0.00788217
+UPenn,Philadelphia,0.024314043,Fully online,"Private nonprofit, 4-year",0.01453983
+Yale,New Haven,0.01734996,Primarily online,"Private nonprofit, 4-year",0.013027619

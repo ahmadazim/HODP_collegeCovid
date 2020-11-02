@@ -145,7 +145,7 @@ Sys.sleep(2)
 html <- remDr$getPageSource()[[1]]
 xpath <- "/html/body/div[3]/div/main/div/article/div[3]/div/div/div/div[8]/div/div/div[1]/div[2]/table/tbody"
 
-scraped <- matrix(0, nrow = 2958, ncol = 4)
+scraped <- matrix(0, nrow = 2958, ncol = 5)
      
 for(j in 1:59){
   signals <- read_html(html) %>% # parse HTML
@@ -156,6 +156,10 @@ for(j in 1:59){
     college_info = as.character(xml_child(xml_child(signals[[1]], lst[i]), 1))
     info = strsplit(strsplit(college_info, '">')[[1]][2], "<")[[1]][1]
     scraped[(50*(j-1) + i), 1] = info 
+    
+    pubPriv <- as.character(xml_child(xml_child(xml_child(signals[[1]], lst[i]), 1)))
+    pubPriv_temp <- strsplit(strsplit(pubPriv, '">')[[1]][2], "<")[[1]][1]
+    scraped[(50*(j-1) + i), 5] = pubPriv_temp 
     
     plan = as.character(xml_child(xml_child(signals[[1]], lst[i]), 3))
     p = strsplit(strsplit(plan, '">')[[1]][4],"<")[[1]][1]
@@ -173,7 +177,7 @@ for(j in 1:59){
   }
   
   nextbutton_Element$clickElement()
-  Sys.sleep(3)
+  Sys.sleep(5)
   html <- remDr$getPageSource()[[1]]
 }
 
@@ -185,11 +189,15 @@ which(duplicated(scraped))
 signals <- read_html(html) %>%
   html_nodes(xpath = xpath)
 lst = seq(2,16,2)
-mtx <- matrix(0, nrow = 8, ncol = 4)
+mtx <- matrix(0, nrow = 8, ncol = 5)
 for(i in 1:8){ 
   college_info = as.character(xml_child(xml_child(signals[[1]], lst[i]), 1))
   info = strsplit(strsplit(college_info, '">')[[1]][2], "<")[[1]][1]
   mtx[i, 1] = info 
+  
+  pubPriv <- as.character(xml_child(xml_child(xml_child(signals[[1]], lst[i]), 1)))
+  pubPriv_temp <- strsplit(strsplit(pubPriv, '">')[[1]][2], "<")[[1]][1]
+  scraped[i, 5] = pubPriv_temp 
   
   plan = as.character(xml_child(xml_child(signals[[1]], lst[i]), 3))
   p = strsplit(strsplit(plan, '">')[[1]][4],"<")[[1]][1]
@@ -208,7 +216,7 @@ for(i in 1:8){
 
 
 final = rbind(scraped[1:2950,], mtx)
-colnames(final) = c("Name", "Plan", "Enrollment", "Cases")
+colnames(final) = c("Name", "Plan", "Enrollment", "Cases", "Type")
 df <- data.frame(final)
 
 #df <- readRDS("clare.rds")
@@ -279,22 +287,6 @@ theme_hodp <- function () {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 a <- ggplot(data=frfr, aes(x=county_covid, y=cases)) +
   theme_hodp() 
 png(".output.png", width = 480, height = 350, res = 300)
@@ -347,10 +339,10 @@ x$state_covid <- NULL
 x$mergedName <- NULL
 x$Enrollment <- NULL
 x$Cases <- NULL
-colnames(x) <- c("University", "County Name", "County COVID-19 Proportion", "Reopening Plan", "University COVID-19 Cases")
+colnames(x) <- c("University", "County Name", "County COVID-19 Proportion", "Reopening Plan", "Type", "University COVID-19 Cases")
 write.csv(x, file = "./ivies.csv")
 
-#x <- read.csv("./ivies.csv", header = TRUE)[1:9,]
+x <- read.csv("./ivies.csv", header = TRUE)[1:9,]
 
 x <- rbind(x, x)
 x$value = c(x$County.COVID.19[1:9], x$University.COVID.19[1:9])
@@ -358,6 +350,7 @@ x$Scope <- c(rep("County",9), rep("University",9))
 x$County.COVID.19 <- NULL 
 x$University.COVID.19 <- NULL
 x$County.Name <- NULL
+x$Type <- NULL
 
 x$University <- factor(x$University, levels = c('Harvard', "Columbia", 'Princeton','UPenn',  "Brown", "Yale", 'Dartmouth',  'Stanford', 'Cornell'))
 b <- ggplot(data=x, aes(x=University, y=value, fill=Scope)) +
@@ -369,10 +362,70 @@ b <- ggplot(data=x, aes(x=University, y=value, fill=Scope)) +
   labs(title= "Comparison of COVID-19 Proportions at the County and University Level") + 
   xlab("")
   
-
 png("./barplot.png", width = 2592, height = 1890, res = 300)
 b 
 dev.off()
+
+
+
+
+### Subsetting types of colleges...
+frfr$Type2 <- 0 
+frfr$Type2[frfr$Type == as.character(factor(frfr$Type)[1])] = 1  #"Private nonprofit, 4-year"
+frfr$Type2[frfr$Type == as.character(factor(frfr$Type)[2])] = 2  #"Public, 2-year"
+frfr$Type2[frfr$Type == as.character(factor(frfr$Type)[3])] = 3  #"Public, 4-year"
+
+generalPlan <- data.frame(table(frfr$Plan))
+generalPlan$Freq[generalPlan$Var1 == "Other"] <- generalPlan$Freq[generalPlan$Var1 == "Other"] + generalPlan$Freq[generalPlan$Var1 == "Undetermined"]
+generalPlan <- generalPlan[generalPlan$Var1 != "Undetermined",]
+
+generalPlan$Var1 <- factor(generalPlan$Var1, levels = c('Fully in person', 'Primarily in person', 'Hybrid', 'Primarily online', 'Fully online', 'Other'))
+colnames(generalPlan) <- c("Plan", "Freq")
+pie <- ggplot(data=generalPlan, aes(x=2, y=Freq, fill = Plan)) +
+  geom_bar(stat="identity", width = 1) +
+  theme_void() + 
+  theme(plot.title = element_text(size=20,  family="Helvetica", face = "bold", margin = margin(t = 10, r = 0, b = 1, l = 0), hjust = 0.5),
+        legend.title=element_text(size=10, family="Helvetica"), 
+        legend.text=element_text(size=10, family="Helvetica"),
+        legend.position = "bottom",
+        ) + 
+  scale_fill_manual(values = c('#EE3838', '#FA9E1C', "#78C4D4", '#4B5973', '#760000', "#E2DDDB")) +
+  labs(title= "All College Reopening Plans") + 
+  coord_polar("y") +
+  xlim(0.2,2.5)
+
+png("./allPlan.png", width = 2592, height = 1890, res = 300)
+pie
+dev.off()
+
+
+
+## Type 1
+frfri <- frfr[frfr$Type2 == i,] # REPLACE i WITH WHATEVER YOU WANT 
+generalPlan <- data.frame(table(frfri$Plan))
+generalPlan$Freq[generalPlan$Var1 == "Other"] <- generalPlan$Freq[generalPlan$Var1 == "Other"] + generalPlan$Freq[generalPlan$Var1 == "Undetermined"]
+generalPlan <- generalPlan[generalPlan$Var1 != "Undetermined",]
+
+generalPlan$Var1 <- factor(generalPlan$Var1, levels = c('Fully in person', 'Primarily in person', 'Hybrid', 'Primarily online', 'Fully online', 'Other'))
+colnames(generalPlan) <- c("Plan", "Freq")
+pie <- ggplot(data=generalPlan, aes(x=2, y=Freq, fill = Plan)) +
+  geom_bar(stat="identity", width = 1) +
+  theme_void() + 
+  theme(plot.title = element_text(size=20,  family="Helvetica", face = "bold", margin = margin(t = 10, r = 0, b = 1, l = 0), hjust = 0.5),
+        legend.title=element_text(size=10, family="Helvetica"), 
+        legend.text=element_text(size=10, family="Helvetica"),
+        legend.position = "bottom",
+  ) + 
+  scale_fill_manual(values = c('#EE3838', '#FA9E1C', "#78C4D4", '#4B5973', '#760000', "#E2DDDB")) +
+  labs(title= "Reopening Plans for 4-Year, Public Colleges") + 
+  coord_polar("y") +
+  xlim(0.2,2.5)
+
+png("./allPlani.png", width = 2592, height = 1890, res = 300)
+pie
+dev.off()
+
+
 
 
 
