@@ -384,7 +384,7 @@ colnames(generalPlan) <- c("Plan", "Freq")
 pie <- ggplot(data=generalPlan, aes(x=2, y=Freq, fill = Plan)) +
   geom_bar(stat="identity", width = 1) +
   theme_void() + 
-  theme(plot.title = element_text(size=24,  family="Helvetica", face = "bold", margin = margin(t = 10, r = 0, b = 10, l = 0)),
+  theme(plot.title = element_text(size=20,  family="Helvetica", face = "bold", margin = margin(t = 10, r = 0, b = 1, l = 0), hjust = 0.5),
         legend.title=element_text(size=10, family="Helvetica"), 
         legend.text=element_text(size=10, family="Helvetica"),
         legend.position = "bottom",
@@ -401,8 +401,8 @@ dev.off()
 
 
 ## Type 1
-frfr1 <- frfr[frfr$Type2 == 3,] # REPLACE i WITH WHATEVER YOU WANT 
-generalPlan <- data.frame(table(frfr1$Plan))
+frfri <- frfr[frfr$Type2 == i,] # REPLACE i WITH WHATEVER YOU WANT 
+generalPlan <- data.frame(table(frfri$Plan))
 generalPlan$Freq[generalPlan$Var1 == "Other"] <- generalPlan$Freq[generalPlan$Var1 == "Other"] + generalPlan$Freq[generalPlan$Var1 == "Undetermined"]
 generalPlan <- generalPlan[generalPlan$Var1 != "Undetermined",]
 
@@ -421,16 +421,17 @@ pie <- ggplot(data=generalPlan, aes(x=2, y=Freq, fill = Plan)) +
   coord_polar("y") +
   xlim(0.2,2.5)
 
-png("./allPlan3.png", width = 2592, height = 1890, res = 300)
+png("./allPlani.png", width = 2592, height = 1890, res = 300)
 pie
 dev.off()
 
 
 
 
-
-
-
+plot(frfr$county_covid, frfr$cases_adj, col = 'navyblue', main ="How do College COVID-19 Cases Compare \n to Their Counties?", 
+     xlab = "Proportion of COVID-19 Cases in County", ylab = "Proportion of COVID-19 Cases in College")
+abline(frfr$county_covid, frfr$cases_adj, col = 'red')
+text(0.085, 0.02, "y = 0.3085(x) + 0.0056", cex = 0.9, font = 4)
 
 
 
