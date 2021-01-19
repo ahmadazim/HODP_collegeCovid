@@ -161,24 +161,25 @@ aug15_plot
 
 
 #july1_props = reopen[reopen$date == 'july1' & reopen$plan != "Other" & reopen$plan != "Undetermined",]
+plansCovid_july1$plan = factor(plansCovid_july1$plan, levels = c('Fully in person', 'Primarily in person', 'Hybrid', 'Primarily online','Fully online'))
 
-july1_plot <- ggplot(data=plansCovid_july1, aes(x=reorder(plan, meanCovid), y=meanCovid, fill= plan)) +
+july1_plot <- ggplot(data=plansCovid_july1, aes(x=plan, y=meanCovid, fill= plan)) +
   geom_bar(stat="identity", position=position_dodge()) +
   #geom_boxplot() +
   geom_errorbar(aes(ymin=meanCovid-SE, ymax=meanCovid+SE), width=.2, position=position_dodge(.9)) + 
   theme_hodp() + 
-  scale_fill_manual(values = c('#4B5973', '#760000', '#FA9E1C', "#78C4D4", '#EE3838'))+
+  scale_fill_manual(values = c("#78C4D4", '#4B5973', '#EE3838', '#FA9E1C', '#760000'))+
   theme(legend.position = 'none', axis.text.x = element_text(angle = 0, hjust = 0.4), plot.title = element_text(size=15)) +
   ylab("Average County COVID-19 Proportions") +
   labs(title= "County COVID-19 Proportions vs College Reopening Plan") + 
   xlab("Reopening Plan")+ 
   #geom_signif(comparisons = list(c("Primarily in person", "Fully online")), 
   #            map_signif_level=TRUE)
-  geom_signif(y_position=0.0124, xmin=1, xmax=5,
+  geom_signif(y_position=0.0124, xmin=2, xmax=4,
             annotation="**", tip_length=0) 
 
 # testing for significance between fully online and primarily in person
-t.test(reopen$countyCovidProp[reopen$date == "july1" & reopen$plan == "Fully online"], reopen$countyCovidProp[reopen$date == "july1" & reopen$plan == "Primarily in person"])
+t.test(reopen$countyCovidProp[reopen$date == "july1" & reopen$plan == "Primarily online"], reopen$countyCovidProp[reopen$date == "july1" & reopen$plan == "Primarily in person"])
 
 png("./Figures/advised.png", width = 2592, height = 1890, res = 300)
 july1_plot 
@@ -471,7 +472,8 @@ enrollment_data = d[d$plan != "Other" & d$plan != "Undetermined",]
 enrollment_means <- data.frame(mean=tapply(as.numeric(enrollment_data$enrollment2018), enrollment_data$plan, mean))
 enrollment_means$plan = rownames(enrollment_means)
 
-enrollment_plot <- ggplot(data=enrollment_means, aes(x=reorder(plan, mean), y=mean)) +
+enrollment_means$plan = factor(enrollment_means$plan, levels = c('Fully in person', 'Primarily in person', 'Hybrid', 'Primarily online', 'Fully online'))
+enrollment_plot <- ggplot(data=enrollment_means, aes(x=plan, y=mean)) +
   geom_bar(stat="identity", position=position_dodge(), fill = '#EE3838') +
   theme_hodp()+
   ylab("Mean Enrollment") +
